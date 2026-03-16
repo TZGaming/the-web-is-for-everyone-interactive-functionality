@@ -190,14 +190,25 @@ article {
         display: flex;
         justify-content: center;
         align-items: flex-start;
-        img {
-            background-color: var(--color-secondary);
-            aspect-ratio: 1 / 1;
-            width: 140px;
-            border-radius: 100%;
-        }
 
         input {
+            display: none;
+        }
+
+        label {
+            background-color: var(--color-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            width: 140px;
+            height: 140px;
+
+            img {
+                margin-top: -5px;
+                width: 45%;
+            }
+
             &:hover {
                 cursor: pointer;
             }
