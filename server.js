@@ -1,81 +1,143 @@
-// Importeer het npm package Express (uit de door npm aangemaakte node_modules map)
-// Deze package is geïnstalleerd via `npm install`, en staat als 'dependency' in package.json
 import express from 'express'
-
-// Importeer de Liquid package (ook als dependency via npm geïnstalleerd)
 import { Liquid } from 'liquidjs';
+
 
 // Maak een nieuwe Express applicatie aan, waarin we de server configureren
 const app = express()
 
 // Maak werken met data uit formulieren iets prettiger
-app.use(express.urlencoded({extended: true}))
+app.use(express.urlencoded({ extended: true }))
 
 // Gebruik de map 'public' voor statische bestanden (resources zoals CSS, JavaScript, afbeeldingen en fonts)
 // Bestanden in deze map kunnen dus door de browser gebruikt worden
 app.use(express.static('public'))
 
 // Stel Liquid in als 'view engine'
-const engine = new Liquid()
-app.engine('liquid', engine.express())
+const engine = new Liquid();
+app.engine('liquid', engine.express());
 
 // Stel de map met Liquid templates in
 // Let op: de browser kan deze bestanden niet rechtstreeks laden (zoals voorheen met HTML bestanden)
 app.set('views', './views')
 
+// Snapmaps
+app.get('/', async function (request, response) {
 
-console.log('Let op: Er zijn nog geen routes. Voeg hier dus eerst jouw GET en POST routes toe.')
+  response.redirect('/groups')
+})
 
-/*
-// Zie https://expressjs.com/en/5x/api.html#app.get.method over app.get()
-app.get(…, async function (request, response) {
+// Groups
+const groupsResponse = await fetch('https://fdnd-agency.directus.app/items/snappthis_group?fields=name,uuid,users,snappmap.snappthis_snapmap_uuid.*')
+const groupsJSON = await groupsResponse.json()
+
+app.get('/groups', async function (request, response) {
+
+  response.render('groups.liquid', { groups: groupsJSON.data })
+})
+
+app.get('/groups/:uuid', async function (request, response) {
+  const groupUuid = request.params.uuid
+
+  const url = `https://fdnd-agency.directus.app/items/snappthis_group?filter[uuid][_eq]=${groupUuid}&fields=name,uuid,snappmap.snappthis_snapmap_uuid.*`
   
-  // Zie https://expressjs.com/en/5x/api.html#res.render over response.render()
-  response.render(…)
+  const groupResponse = await fetch(url)
+  const groupJSON = await groupResponse.json()
+
+  const groupData = groupJSON.data[0]
+
+  response.render('group-detail.liquid', { group: groupData })
 })
-*/
 
-/*
-// Zie https://expressjs.com/en/5x/api.html#app.post.method over app.post()
-app.post(…, async function (request, response) {
 
-  // In request.body zitten alle formuliervelden die een `name` attribuut hebben in je HTML
-  console.log(request.body)
+// Snapmaps
+app.get('/snappmaps', async function (request, response) {
 
-  // Via een fetch() naar Directus vullen we nieuwe gegevens in
-
-  // Zie https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch over fetch()
-  // Zie https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify over JSON.stringify()
-  // Zie https://docs.directus.io/reference/items.html#create-an-item over het toevoegen van gegevens in Directus
-  // Zie https://docs.directus.io/reference/items.html#update-an-item over het veranderen van gegevens in Directus
-  const fetchResponse = await fetch(…, {
-    method: …,
-    body: JSON.stringify(…),
-    headers: {
-      'Content-Type': 'application/json;charset=UTF-8'
-    }
-  })
-
-  // Als de POST niet gelukt is, kun je de response loggen. Sowieso een goede debugging strategie.
-  // console.log(fetchResponse)
-
-  // Eventueel kun je de JSON van die response nog debuggen
-  // const fetchResponseJSON = await fetchResponse.json()
-  // console.log(fetchResponseJSON)
-
-  // Redirect de gebruiker daarna naar een logische volgende stap
-  // Zie https://expressjs.com/en/5x/api.html#res.redirect over response.redirect()
-  response.redirect(303, …)
+  response.render('snappmaps.liquid', { groups: groupsJSON.data })
 })
-*/
 
+app.get('/snappmaps/:uuid', async function (request, response) {
+  // 1. Haal de snappmap op
+  const snappmapResponse = await fetch('https://fdnd-agency.directus.app/items/snappthis_snapmap?fields=*.*.*.*&filter[uuid][_eq]=' + request.params.uuid);
+  const snappmapJSON = await snappmapResponse.json();
+  
+  // Controleer of de data array bestaat en gevuld is
+  const snappmap = (snappmapJSON.data && snappmapJSON.data.length > 0) ? snappmapJSON.data[0] : null;
+
+  // 2. Zoek de groep (beveiligd tegen null-pointer errors)
+  const parentGroup = groupsJSON.data.find(group => 
+    group.snappmap && group.snappmap.some(s => 
+      s.snappthis_snapmap_uuid && s.snappthis_snapmap_uuid.uuid === request.params.uuid
+    )
+  );
+
+  // 3. Render: Geef 'snappmap' en 'groupName' expliciet mee
+  response.render('snappmap.liquid', { 
+    snapmap: snappmap,
+    groupName: parentGroup ? parentGroup.name : 'Geen groep gevonden',
+    snappmaps: snappmap ? [snappmap] : [] // Geef een lege lijst mee als snappmap null is
+  });
+});
+
+
+
+// Snapps
+app.get('/snapps/:location', async function (request, response) {
+
+  const snappsResponse = await fetch('https://fdnd-agency.directus.app/items/snappthis_snap?fields=*.*&filter[location][_eq]=' + request.params.location)
+  const snappsJSON = await snappsResponse.json()
+
+
+  response.render('snappmap.liquid', { snapps: snappsJSON.data })
+})
+
+app.get('/snapps/snappmap/:uuid', async function (request, response) {
+  const url = `https://fdnd-agency.directus.app/items/snappthis_snap?fields=*.*,actions.action&filter[uuid][_eq]=${request.params.uuid}`;
+  const snappResponse = await fetch(url);
+  const snappJSON = await snappResponse.json();
+  const snapp = (snappJSON.data && snappJSON.data.length > 0) ? snappJSON.data[0] : null;
+
+  if (!snapp) return response.status(404).send("Snap niet gevonden");
+
+  let snappmap = null;
+  const snapmapId = typeof snapp.snapmap === 'object' ? snapp.snapmap.uuid : snapp.snapmap;
+
+  if (snapmapId) {
+      const snappmapResponse = await fetch(`https://fdnd-agency.directus.app/items/snappthis_snapmap?fields=*.*.*.*&filter[uuid][_eq]=${snapmapId}`);
+      const snappmapJSON = await snappmapResponse.json();
+      
+      if (snappmapJSON.data && Array.isArray(snappmapJSON.data) && snappmapJSON.data.length > 0) {
+          snappmap = snappmapJSON.data[0];
+      }
+  }
+
+  const parentGroup = groupsJSON.data.find(group => 
+    group.snappmap && group.snappmap.some(s => 
+      s.snappthis_snapmap_uuid && s.snappthis_snapmap_uuid.uuid === snapmapId
+    )
+  );
+
+  // 4. Render
+  response.render('snapp.liquid', { 
+    snapp: snapp,
+    snapmap: snappmap,
+    groupName: parentGroup ? parentGroup.name : 'Geen groep gevonden',
+    groups: groupsJSON.data
+  });
+});
+
+
+app.post('/', async function (request, response) {
+  // Je zou hier data kunnen opslaan, of veranderen, of wat je maar wilt
+  // Er is nog geen afhandeling van een POST, dus stuur de bezoeker terug naar /
+  response.redirect(303, '/')
+})
 
 // Stel het poortnummer in waar Express op moet gaan luisteren
-// Lokaal is dit poort 8000; als deze applicatie ergens gehost wordt, waarschijnlijk poort 80
+// Lokaal is dit poort 8000, als dit ergens gehost wordt, is het waarschijnlijk poort 80
 app.set('port', process.env.PORT || 8000)
 
-// Start Express op, gebruik daarbij het zojuist ingestelde poortnummer op
+// Start Express op, haal daarbij het zojuist ingestelde poortnummer op
 app.listen(app.get('port'), function () {
-  // Toon een bericht in de console
-  console.log(`Daarna kun je via http://localhost:${app.get('port')}/ jouw interactieve website bekijken.\n\nThe Web is for Everyone. Maak mooie dingen 🙂`)
+  // Toon een bericht in de console en geef het poortnummer door
+  console.log(`Application started on http://localhost:${app.get('port')}`)
 })
