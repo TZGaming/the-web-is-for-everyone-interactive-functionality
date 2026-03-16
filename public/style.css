@@ -41,7 +41,7 @@ nav {
         padding-right: 20px;
         color: white;
         font-family: Bariol-Bold;
-        font-size: clamp(0.75rem, 0.7497rem + 0.4289vw, 1.125rem);
+        font-size: clamp(0.75rem, 0.5rem + 0.4289vw, 1.125rem);
         fill: white;
 
         h1 {
@@ -50,11 +50,11 @@ nav {
 
         svg {
             width: 3.6vh;
-            transition: scale .2s;
+            transition: scale .1s;
 
             &:hover {
                 cursor: pointer;
-                scale: 0.93;
+                scale: 1.07;
             }
         }
 
@@ -95,11 +95,11 @@ nav {
 
         svg {
             width: 4.2vh;
-            transition: scale .2s;
+            transition: scale .1s;
 
             &:hover {
                 cursor: pointer;
-                scale: 0.93;
+                scale: 1.07;
             }
         }
     }
@@ -129,8 +129,9 @@ nav {
             }
 
             p {
-                margin: 0;
+                margin: 3px 0px 0px 0px;
                 color: var(--text-color1);
+                font-size: .75rem;
             }
         }
     }
@@ -207,10 +208,14 @@ article {
             img {
                 margin-top: -5px;
                 width: 45%;
+                transition: scale .1s;
             }
 
             &:hover {
                 cursor: pointer;
+                img {
+                    scale: 1.1;
+                }
             }
         }
     }
