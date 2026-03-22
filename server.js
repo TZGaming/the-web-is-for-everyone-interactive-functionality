@@ -126,10 +126,68 @@ app.get('/snapps/snappmap/:uuid', async function (request, response) {
 });
 
 
-app.post('/', async function (request, response) {
-  // Je zou hier data kunnen opslaan, of veranderen, of wat je maar wilt
-  // Er is nog geen afhandeling van een POST, dus stuur de bezoeker terug naar /
-  response.redirect(303, '/')
+// Upload snapps
+app.post("/snappmaps/:uuid", upload.single("file"), async (req, res) => {
+
+  // Step 1: Upload file to Directus
+
+  // Get the uploaded file from the form in HTML
+  const file = req.file;
+
+  // Create a new FormData object to send file data in a multipart/form-data request
+  const formData = new FormData()
+  const blob = new Blob([file.buffer], { type: file.mimetype })
+  formData.append("file", blob, file.originalname)
+
+  // Send a POST request to Directus API to upload the file
+  const uploadResponse = await fetch("https://fdnd-agency.directus.app/files", {
+    method: "POST",
+    body: formData,
+  })
+
+  // Parse the JSON response from Directus
+  const uploadResponseData = await uploadResponse.json();
+
+  // Extract the file ID from the response (Directus returns "id", not "uuid")
+  const imageId = uploadResponseData?.data?.id;
+
+  // If no file ID is returned, the upload failed → send error response
+  if (!imageId) {
+    return res.send("Upload failed: No file ID returned");
+  }
+
+  // Step 2: Create new item in Directus
+
+  // Get snappmap uuid from route parameters
+  const snappmapuuid = req.params.uuid
+
+  // Create an object representing the new item to store in Directus
+  const newSnap = {
+    location: "Amsterdam Zuidoost",
+    snapmap: snappmapuuid,
+    author: "ae56c4e4-e0a6-4e99-9790-88ecf9db9138",
+    picture: imageId,
+  };
+
+  // Send a POST request to create a new item in Directus
+  const snapResponse = await fetch("https://fdnd-agency.directus.app/items/snappthis_snap", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(newSnap),
+  });
+
+  // Parse the JSON response from Directus
+  const snapData = await snapResponse.json();
+
+  // If new item creation failed → send error response
+  if (!snapResponse.ok) {
+    return res.redirect(303, `/snappmaps/?status=error`)
+  }
+
+  // If new item creation worked → Success response
+    res.redirect(303, `/snappmaps/?status=success`)
 })
 
 // Stel het poortnummer in waar Express op moet gaan luisteren
