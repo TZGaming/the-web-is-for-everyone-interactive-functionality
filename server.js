@@ -1,9 +1,12 @@
 import express from 'express'
 import { Liquid } from 'liquidjs';
+import multer from 'multer';
 
 
 // Maak een nieuwe Express applicatie aan, waarin we de server configureren
 const app = express()
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Maak werken met data uit formulieren iets prettiger
 app.use(express.urlencoded({ extended: true }))
@@ -56,21 +59,21 @@ app.get('/snappmaps', async function (request, response) {
 })
 
 app.get('/snappmaps/:uuid', async function (request, response) {
-  // 1. Haal de snappmap op
+  // Haal de snappmap op
   const snappmapResponse = await fetch('https://fdnd-agency.directus.app/items/snappthis_snapmap?fields=*.*.*.*&filter[uuid][_eq]=' + request.params.uuid);
   const snappmapJSON = await snappmapResponse.json();
   
   // Controleer of de data array bestaat en gevuld is
   const snappmap = (snappmapJSON.data && snappmapJSON.data.length > 0) ? snappmapJSON.data[0] : null;
 
-  // 2. Zoek de groep (beveiligd tegen null-pointer errors)
+  // Zoek de groep (beveiligd tegen null-pointer errors)
   const parentGroup = groupsJSON.data.find(group => 
     group.snappmap && group.snappmap.some(s => 
       s.snappthis_snapmap_uuid && s.snappthis_snapmap_uuid.uuid === request.params.uuid
     )
   );
 
-  // 3. Render: Geef 'snappmap' en 'groupName' expliciet mee
+  // Render: Geef 'snappmap' en 'groupName' mee
   response.render('snappmap.liquid', { 
     snapmap: snappmap,
     groupName: parentGroup ? parentGroup.name : 'Geen groep gevonden',
@@ -126,69 +129,104 @@ app.get('/snapps/snappmap/:uuid', async function (request, response) {
 });
 
 
-// Upload snapps
+// POST
+
 app.post("/snappmaps/:uuid", upload.single("file"), async (req, res) => {
 
-  // Step 1: Upload file to Directus
+  try {
+    const file = req.file;
 
-  // Get the uploaded file from the form in HTML
-  const file = req.file;
+    if (!file) {
+      return res.send("No file uploaded");
+    }
 
-  // Create a new FormData object to send file data in a multipart/form-data request
-  const formData = new FormData()
-  const blob = new Blob([file.buffer], { type: file.mimetype })
-  formData.append("file", blob, file.originalname)
+    // Get uuid from route
+    const snappmapuuid = req.params.uuid;
 
-  // Send a POST request to Directus API to upload the file
-  const uploadResponse = await fetch("https://fdnd-agency.directus.app/files", {
-    method: "POST",
-    body: formData,
-  })
+    // console.log("Snapmap UUID:", snappmapuuid);
 
-  // Parse the JSON response from Directus
-  const uploadResponseData = await uploadResponse.json();
+    // Step 1: Upload file to Directus
+    const formData = new FormData();
+    const blob = new Blob([file.buffer], { type: file.mimetype });
+    formData.append("file", blob, file.originalname);
 
-  // Extract the file ID from the response (Directus returns "id", not "uuid")
-  const imageId = uploadResponseData?.data?.id;
+    const uploadResponse = await fetch(
+      "https://fdnd-agency.directus.app/files",
+      {
+        method: "POST",
+        body: formData,
 
-  // If no file ID is returned, the upload failed → send error response
-  if (!imageId) {
-    return res.send("Upload failed: No file ID returned");
+        // 🔐 Uncomment if needed
+        // headers: {
+        //   Authorization: "Bearer YOUR_TOKEN",
+        // },
+      }
+    );
+
+    const uploadResponseData = await uploadResponse.json();
+
+    // console.log("Upload status:", uploadResponse.status);
+    // console.log("Upload response:", uploadResponseData);
+
+    const imageId = uploadResponseData?.data?.id;
+
+    if (!imageId) {
+      return res.send("Upload failed: No file ID returned");
+    }
+
+    const newSnap = {
+      location: "Amsterdam Zuidoost",
+      snapmap: snappmapuuid,
+      author: "ae56c4e4-e0a6-4e99-9790-88ecf9db9138",
+      picture: imageId,
+    };
+
+    // console.log("Sending newSnap:", newSnap);
+
+    const snapResponse = await fetch(
+      "https://fdnd-agency.directus.app/items/snappthis_snap",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+
+          // 🔐 Uncomment if needed
+          // Authorization: "Bearer YOUR_TOKEN",
+        },
+        body: JSON.stringify(newSnap),
+      }
+    );
+
+    const snapData = await snapResponse.json();
+
+    console.log("Snap status:", snapResponse.status);
+    console.log("Snap response:", snapData);
+
+    if (!snapResponse.ok) {
+      return res.send(`
+        <h2>❌ Failed to create item</h2>
+        <pre>${JSON.stringify(snapData, null, 2)}</pre>
+        <a href="/">Go back</a>
+      `);
+    }
+
+    res.send(`
+      <h2>✅ Success 🎉</h2>
+      <p>File ID: ${imageId}</p>
+      <pre>${JSON.stringify(snapData, null, 2)}</pre>
+      <a href="/">Go back</a>
+    `);
+
+  } catch (err) {
+    console.error("REAL ERROR:", err);
+
+    res.status(500).send(`
+      <h2>💥 Server Error</h2>
+      <pre>${err.message}</pre>
+    `);
   }
-
-  // Step 2: Create new item in Directus
-
-  // Get snappmap uuid from route parameters
-  const snappmapuuid = req.params.uuid
-
-  // Create an object representing the new item to store in Directus
-  const newSnap = {
-    location: "Amsterdam Zuidoost",
-    snapmap: snappmapuuid,
-    author: "ae56c4e4-e0a6-4e99-9790-88ecf9db9138",
-    picture: imageId,
-  };
-
-  // Send a POST request to create a new item in Directus
-  const snapResponse = await fetch("https://fdnd-agency.directus.app/items/snappthis_snap", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(newSnap),
-  });
-
-  // Parse the JSON response from Directus
-  const snapData = await snapResponse.json();
-
-  // If new item creation failed → send error response
-  if (!snapResponse.ok) {
-    return res.redirect(303, `/snappmaps/?status=error`)
-  }
-
-  // If new item creation worked → Success response
-    res.redirect(303, `/snappmaps/?status=success`)
-})
+});
+ 
 
 // Stel het poortnummer in waar Express op moet gaan luisteren
 // Lokaal is dit poort 8000, als dit ergens gehost wordt, is het waarschijnlijk poort 80

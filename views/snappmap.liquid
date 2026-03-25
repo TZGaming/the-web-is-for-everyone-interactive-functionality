@@ -9,13 +9,15 @@
     </article>
 
     <article class="camera-button-container">
-      <form action="">
+      <form method="POST" action="/snappmaps/{{ snapmap.uuid }}" enctype="multipart/form-data">
         <label for="picture">
           <img src="/assets/svg/camera.svg">
+          <input type="file" id="picture" name="file" accept="image/*" capture="environment"/>
         </label>
+
+        <button type="submit">Add snapp</button>
       </form>
         
-      <input type="file" id="picture" name="picture" accept="image/*" capture="environment"/>
     </article>
 
     <ul class="photo-grid">
