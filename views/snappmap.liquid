@@ -12,10 +12,8 @@
       <form method="POST" action="/snappmaps/{{ snapmap.uuid }}" enctype="multipart/form-data">
         <label for="picture">
           <img src="/assets/svg/camera.svg">
-          <input type="file" id="picture" name="file" accept="image/*" capture="environment"/>
+          <input type="file" id="picture" name="file" accept="image/*" capture="environment" onchange="this.form.submit()">
         </label>
-
-        <button type="submit">Add snapp</button>
       </form>
         
     </article>
