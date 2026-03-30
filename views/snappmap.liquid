@@ -15,21 +15,21 @@
           <input type="file" id="picture" name="file" accept="image/*" capture="environment" onchange="this.form.submit()">
         </label>
       </form>
-        
     </article>
 
     <ul class="photo-grid">
       {% for item in snappmaps %}
-        {% for snap in item.snaps %}
-          {% if snap.picture.id != null %}
-            <li>
-              <a href="/snapps/snappmap/{{ snap.uuid }}">
-                <img src="https://fdnd-agency.directus.app/assets/{{ snap.picture.id }}" loading="lazy">
-              </a>
-            </li>
-          {% endif %}
+        {% assign sorted_snaps = item.snaps | sort: "date_created" | reverse %}
+          {% for snap in sorted_snaps %}
+            {% if snap.picture.id != null %}
+              <li>
+                <a href="/snapps/snappmap/{{ snap.uuid }}">
+                  <img src="https://fdnd-agency.directus.app/assets/{{ snap.picture.id }}" loading="lazy">
+                </a>
+              </li>
+            {% endif %}
+          {% endfor %}
         {% endfor %}
-      {% endfor %}
     </ul>
 
     {% render 'partials/bottombar.liquid' %}
