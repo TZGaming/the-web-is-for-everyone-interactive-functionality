@@ -8,6 +8,15 @@
       <h1>{{ groupName }}</h1> 
     </article>
 
+    <div id="successPopup" class="popup-overlay" style="display: none;">
+      <div class="popup-content">
+        <h2>Your snapp has been added successfully!</h2>
+        <button onclick="closePopup()">
+          <p>OK</p>
+        </button>
+      </div>
+    </div>
+
     <article class="camera-button-container">
       <form method="POST" action="/snappmaps/{{ snapmap.uuid }}" enctype="multipart/form-data">
         <label for="picture">
@@ -35,3 +44,22 @@
     {% render 'partials/bottombar.liquid' %}
   </main>
 </body>
+
+<script>
+  window.addEventListener('load', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Als 'success' in de URL staat, toon de popup
+    if (urlParams.get('success') === 'true') {
+      document.getElementById('successPopup').style.display = 'flex';
+    }
+  });
+
+  // Functie om de popup te sluiten
+  function closePopup() {
+    document.getElementById('successPopup').style.display = 'none';
+    
+    const newUrl = window.location.pathname;
+    window.history.replaceState({}, document.title, newUrl);
+  }
+</script>

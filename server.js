@@ -175,7 +175,7 @@ app.post("/snappmaps/:uuid", upload.single("file"), async (req, res) => {
     }
 
     const newSnap = {
-      location: "Amsterdam Zuidoost",
+      location: "Heemskerk",
       snapmap: snappmapuuid,
       author: "ae56c4e4-e0a6-4e99-9790-88ecf9db9138",
       picture: imageId,
@@ -202,12 +202,10 @@ app.post("/snappmaps/:uuid", upload.single("file"), async (req, res) => {
     console.log("Snap status:", snapResponse.status);
     console.log("Snap response:", snapData);
 
-    if (!snapResponse.ok) {
-      return res.send(`
-        <h2>❌ Failed to create item</h2>
-        <pre>${JSON.stringify(snapData, null, 2)}</pre>
-        <a href="/">Go back</a>
-      `);
+    if (snapResponse.ok) {
+        // We sturen de gebruiker terug naar de pagina waar ze vandaan kwamen
+        // We voegen een 'query param' toe: ?success=true
+        return res.redirect(`/snappmaps/${snappmapuuid}?success=true`);
     }
 
     res.send(`
