@@ -10,23 +10,29 @@
 }
 
 @font-face {
-    font-family: Bariol-Regular;
-    src: url(assets/fonts/Bariol_Regular.otf);
+    font-family: 'Bariol';
+    src: url('assets/fonts/Bariol_Regular.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
 }
 
 @font-face {
-    font-family: Bariol-Bold;
-    src: url(assets/fonts/Bariol_Bold.otf);
+    font-family: 'Bariol';
+    src: url('assets/fonts/Bariol_Bold.otf') format('opentype');
+    font-weight: 700;
+    font-style: bold;
 }
 
 @font-face {
-    font-family: Bariol-Italic;
-    src: url(assets/fonts/Bariol_Regular_Italic.otf);
+    font-family: 'Bariol';
+    src: url('assets/fonts/Bariol_Regular_Italic.otf') format('opentype');
+    font-weight: 400;
+    font-style: italic;
 }
 
 body {
     margin: 0;
-    font-family: Bariol-Regular;
+    font-family: 'Bariol', sans-serif;
 }
 
 nav {
@@ -41,11 +47,20 @@ nav {
         padding-left: 20px;
         padding-right: 20px;
         color: white;
-        font-family: Bariol-Bold;
-        font-size: clamp(0.75rem, 0.5rem + 0.4289vw, 1.125rem);
+        font-family: 'Bariol', sans-serif;
+        font-weight: 700;
         fill: white;
 
-        h1 {
+        .snappmap-title {
+            white-space: nowrap;
+            overflow: hidden;
+            max-width: 65%;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .snappmap-title h1 {
+            display: inline;
             margin: 0;
         }
 
@@ -151,7 +166,8 @@ nav {
         }
 
         p {
-            font-family: Bariol-Bold;
+            font-family: 'Bariol', sans-serif;
+            font-weight: 700;
             font-size: 24px;
             color: white;
         }
@@ -161,7 +177,6 @@ nav {
 .group-container {
     border-bottom: 2px rgba(128, 128, 128, 0.25) solid;
     height: 8vh;
-    font-family: Bariol-Regular;
 
     .group-content {
         height: 100%;
@@ -215,7 +230,6 @@ nav {
 
 article {
     &.group-name {
-        font-family: Bariol-Regular;
         font-size: .8rem;
         color: var(--text-color1);
         display: flex;
@@ -272,7 +286,6 @@ article {
     }
 
     &.snapp-detail {
-        font-family: Bariol-Regular;
 
         img {
             width: 100%;
